@@ -54,7 +54,12 @@ pipeline {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-crendentails-mgeta']]) {
                     dir('infra') {
                         sh 'terraform plan -input=false -out=tfplan'
-                        input message: 'Review the Terraform plan in the build log. Apply these infrastructure changes?', ok: 'Approve apply'
+                    }
+                }
+                // Do not hold cloud credentials in the environment while waiting for approval.
+                input message: 'Review the Terraform plan in the build log. Apply these infrastructure changes?', ok: 'Approve apply'
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-crendentails-mgeta']]) {
+                    dir('infra') {
                         sh 'terraform apply -input=false tfplan'
                     }
                 }
@@ -69,7 +74,12 @@ pipeline {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-crendentails-mgeta']]) {
                     dir('infra') {
                         sh 'terraform plan -destroy -input=false -out=tfplan-destroy'
-                        input message: 'This will destroy Terraform-managed infrastructure. Confirm the plan and resource scope before proceeding.', ok: 'Approve destroy'
+                    }
+                }
+                // Do not hold cloud credentials in the environment while waiting for approval.
+                input message: 'This will destroy Terraform-managed infrastructure. Confirm the plan and resource scope before proceeding.', ok: 'Approve destroy'
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-crendentails-mgeta']]) {
+                    dir('infra') {
                         sh 'terraform apply -input=false tfplan-destroy'
                     }
                 }
@@ -80,8 +90,10 @@ pipeline {
     post {
         always {
             // Saved plans can contain sensitive values; do not retain them in the workspace.
-            dir('infra') {
-                sh 'rm -f tfplan tfplan-destroy'
+            if (fileExists('infra')) {
+                dir('infra') {
+                    sh 'rm -f tfplan tfplan-destroy'
+                }
             }
         }
     }
