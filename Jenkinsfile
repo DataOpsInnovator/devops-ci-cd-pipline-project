@@ -13,6 +13,16 @@ pipeline {
     }
 
     stages {
+        stage('Validate Parameters') {
+            steps {
+                script {
+                    if (params.APPLY_TERRAFORM && params.DESTROY_TERRAFORM) {
+                        error('Choose either APPLY_TERRAFORM or DESTROY_TERRAFORM, not both in the same run.')
+                    }
+                }
+            }
+        }
+
         stage('Checkout Repository') {
             steps {
                 // Jenkins Pipeline-from-SCM already knows the configured repository.
